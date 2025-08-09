@@ -1,5 +1,6 @@
-const { ApolloServer } = require("@apollo/server")
-const { standAloneServer } = require("@apollo/server/standalone")
+import { ApolloServer } from "@apollo/server"
+import { startStandaloneServer } from "@apollo/server/standalone"
+import {issues, users} from "./data.js"
 
 
 const typeDefs = `
@@ -20,8 +21,8 @@ const typeDefs = `
         id: ID!
         title: String
         description: String
-        createdAt: Date
-        updatedAt: Date
+        createdAt: String
+        updatedAt: String
         assignedTo: User
     }
 
@@ -36,14 +37,13 @@ const typeDefs = `
     }
 
     type Mutation {
-        dummy: String
-        updateIssueStatus(
-            id: ID!,
-            status: Status
-        ): Issue!
         createIssue(
             title: String!,
             description: String!
+        ): Issue!
+        updateIssueStatus(
+            id: ID!,
+            status: Status
         ): Issue!
         assignIssue(
             issueId: ID!,
@@ -56,7 +56,19 @@ const typeDefs = `
 
     }
 `
+const resolvers = {
+  Query: {
+    dummy: () => "Hello World!",
+    usersCount: () => users.length,
+    issuesCount: () => issues.length,
+    allIssues: () => issues.map(issue => issue),
+    allUsers: () => users.map(user => user),
+    issue: (root, args) => {
+      return issues.filter(issue => issue.id === id)
+    }
+  }
 
+}
 
 
 
@@ -65,6 +77,9 @@ const server = new ApolloServer({
    resolvers
 })
 
-standAloneServer(server, {
-    listen: { port: 4000 },
-}, ({url}) => console.log(`Server running on: ${url}`))
+
+const { url} = await startStandaloneServer(server, {
+  listen: { port : 4000 },
+})
+
+console.log(`🚀  Server ready at: ${url}`)
