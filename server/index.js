@@ -16,7 +16,7 @@ const resolvers = {
     allIssues: () => issues.map(issue => issue),
     allUsers: () => users.map(user => user),
     issue: (root, args) => {
-      return issues.filter(issue => issue.id === args.id);
+      return issues.find(issue => issue.id === args.id) || null;
     }
   },
   Issue: {
