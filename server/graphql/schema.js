@@ -13,6 +13,7 @@ export const typeDefs = `
         OPEN
         IN_PROGRESS
         CLOSED
+        ASSIGNED
     }
 
     type Issue {
@@ -51,7 +52,7 @@ export const typeDefs = `
         ): Issue!
         createUser(
             name: String!,
-            email: String
-        ): Issue
+            email: String!
+        ): User!
     }
 `

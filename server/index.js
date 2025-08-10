@@ -23,8 +23,10 @@ const resolvers = {
     assignedTo: (root) => {
       return users.find(user => user.id === root.assignedTo) || null;
     }
-  }
-  ,
+  },
+  User: {
+    issues: (root) => issues.filter(issue => issue.assignedTo === root.id) || []
+  },
   Mutation: {
     createIssue: (root, args) => {
       if (!args.title || !args.description) {
@@ -47,7 +49,7 @@ const resolvers = {
       return newIssue;
     },
     assignIssue: (root, args) => {
-      const { issueId, userId } = args
+      const {issueId, userId} = args
       const issue = issues.find(issue => issue.id === issueId)
       if (!issue) {
         throw new GraphQLError("issue not found", {
@@ -71,6 +73,7 @@ const resolvers = {
             ...issue,
             updatedAt: new Date().toISOString(),
             assignedTo: userId,
+            status: "ASSIGNED"
           }
           : issue
       )
@@ -79,14 +82,6 @@ const resolvers = {
     },
     updateIssueStatus: (root, args) => {
       const {issueId, userId, status} = args
-      const user = users.find(user => user.id === userId)
-      if (!user) {
-        throw new GraphQLError("User not found", {
-          extensions: {
-            code: "NOT_FOUND"
-          }
-        })
-      }
       const issue = issues.find(issue => issue.id === issueId)
       if (!issue) {
         throw new GraphQLError("Issue not found", {
@@ -95,6 +90,16 @@ const resolvers = {
           }
         })
       }
+
+      const user = users.find(user => user.id === userId)
+      if (!user) {
+        throw new GraphQLError("User not found", {
+          extensions: {
+            code: "NOT_FOUND"
+          }
+        })
+      }
+
 
       if (issue.assignedTo !== userId) {
         throw new GraphQLError("Not authorized to update this issue", {
@@ -110,6 +115,17 @@ const resolvers = {
           : issue
       )
       return issues.find(issue => issue.id === issueId)
+    },
+    createUser: (root, args) => {
+      const {name, email} = {...args}
+      if (!name || !email) {
+        throw new GraphQLError("Invalid input, enter both email and name", {
+          extensions: {code: "BAD_USER_INPUT"}
+        })
+      }
+      const user = {name, email, id: uuid()}
+      users = users.concat(user)
+      return user
     }
   }
 };
