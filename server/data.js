@@ -1,5 +1,5 @@
 // Sample Users
-const users = [
+let users = [
   {
     id: "u1",
     name: "Alice Wambui",
@@ -18,7 +18,7 @@ const users = [
 ];
 
 // Sample Issues
-const issues = [
+let issues = [
   {
     id: "i1",
     title: "Fix login bug",
@@ -26,7 +26,7 @@ const issues = [
     status: "OPEN",
     createdAt: "2025-08-05T09:30:00Z",
     updatedAt: "2025-08-05T09:30:00Z",
-    assignee: "u1",
+    assignedTo: "u1",
   },
   {
     id: "i2",
@@ -35,7 +35,7 @@ const issues = [
     status: "IN_PROGRESS",
     createdAt: "2025-08-04T11:00:00Z",
     updatedAt: "2025-08-06T15:00:00Z",
-    assignee: "u2",
+    assignedTo: "u2",
   },
   {
     id: "i3",
@@ -44,8 +44,8 @@ const issues = [
     status: "OPEN",
     createdAt: "2025-08-06T13:45:00Z",
     updatedAt: "2025-08-06T13:45:00Z",
-    assignee: null, // unassigned
+    assignedTo: null, // unassigned
   },
 ];
 
-export { users, issues };
+module.exports = { users, issues };

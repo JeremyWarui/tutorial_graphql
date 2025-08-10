@@ -1,61 +1,13 @@
-import { ApolloServer } from "@apollo/server"
-import { startStandaloneServer } from "@apollo/server/standalone"
-import {issues, users} from "./data.js"
+const {ApolloServer} = require("@apollo/server");
+const {startStandaloneServer} = require("@apollo/server/standalone");
+let {issues, users} = require("./data.js");
+const {typeDefs} = require("./graphql/schema.js");
+const {GraphQLError} = require("graphql");
+const {v1: uuid} = require("uuid");
 
-
-const typeDefs = `
-    type User {
-        id: ID!
-        name: String!
-        email: String!
-        issues: [Issue!]!
-    }
-    
-    enum Status {
-        OPEN
-        IN_PROGRESS
-        CLOSED
-    }
-
-    type Issue {
-        id: ID!
-        title: String
-        description: String
-        createdAt: String
-        updatedAt: String
-        assignedTo: User
-    }
-
-    type Query {
-        dummy: String
-        usersCount: Int
-        issuesCount: Int
-        allIssues: [Issue!]!
-        allUsers: [User!]!
-        issue(id: ID!): Issue
-        user(id: ID!): User!
-    }
-
-    type Mutation {
-        createIssue(
-            title: String!,
-            description: String!
-        ): Issue!
-        updateIssueStatus(
-            id: ID!,
-            status: Status
-        ): Issue!
-        assignIssue(
-            issueId: ID!,
-            userId: ID!
-        ): Issue!
-        createUser(
-            name: String!,
-            email: String
-        ): Issue
-
-    }
-`
+/* ----------------------------------------------
+   RESOLVERS: QUERY, MUTATIONS AND SUBSCRIPTIONS
+-------------------------------------------------*/
 const resolvers = {
   Query: {
     dummy: () => "Hello World!",
@@ -64,22 +16,113 @@ const resolvers = {
     allIssues: () => issues.map(issue => issue),
     allUsers: () => users.map(user => user),
     issue: (root, args) => {
-      return issues.filter(issue => issue.id === id)
+      return issues.filter(issue => issue.id === args.id);
+    }
+  },
+  Issue: {
+    assignedTo: (root) => {
+      return users.find(user => user.id === root.assignedTo) || null;
     }
   }
+  ,
+  Mutation: {
+    createIssue: (root, args) => {
+      if (!args.title || !args.description) {
+        throw new GraphQLError("Invalid input", {
+          extensions: {
+            code: "BAD_USER_INPUT",
+            invalidArgs: args.title
+          }
+        });
+      }
+      const newIssue = {
+        id: uuid(),
+        ...args,
+        createdAt: new Date().toISOString(),
+        assignedTo: null,
+        status: "OPEN"
+      };
+      console.log(newIssue);
+      issues = issues.concat(newIssue);
+      return newIssue;
+    },
+    assignIssue: (root, args) => {
+      const { issueId, userId } = args
+      const issue = issues.find(issue => issue.id === issueId)
+      if (!issue) {
+        throw new GraphQLError("issue not found", {
+          extensions: {
+            code: "NOT_FOUND"
+          }
+        })
+      }
+      const user = users.find(user => user.id === userId)
+      if (!user) {
+        throw new GraphQLError("no user found", {
+          extensions: {
+            code: "NOT_FOUND"
+          }
+        })
+      }
 
-}
+      issues = issues.map(issue =>
+        issue.id === issueId ?
+          {
+            ...issue,
+            updatedAt: new Date().toISOString(),
+            assignedTo: userId,
+          }
+          : issue
+      )
 
+      return issues.find(issue => issue.id === issueId)
+    },
+    updateIssueStatus: (root, args) => {
+      const {issueId, userId, status} = args
+      const user = users.find(user => user.id === userId)
+      if (!user) {
+        throw new GraphQLError("User not found", {
+          extensions: {
+            code: "NOT_FOUND"
+          }
+        })
+      }
+      const issue = issues.find(issue => issue.id === issueId)
+      if (!issue) {
+        throw new GraphQLError("Issue not found", {
+          extensions: {
+            code: "NOT_FOUND"
+          }
+        })
+      }
 
+      if (issue.assignedTo !== userId) {
+        throw new GraphQLError("Not authorized to update this issue", {
+          extensions: {
+            code: "FORBIDDEN"
+          }
+        })
+      }
+
+      issues = issues.map(issue =>
+        issue.id === issueId ?
+          {...issue, status: status, updatedAt: new Date().toISOString()}
+          : issue
+      )
+      return issues.find(issue => issue.id === issueId)
+    }
+  }
+};
 
 const server = new ApolloServer({
-   typeDefs,
-   resolvers
-})
+  typeDefs,
+  resolvers
+});
 
-
-const { url} = await startStandaloneServer(server, {
-  listen: { port : 4000 },
-})
-
-console.log(`🚀  Server ready at: ${url}`)
+(async () => {
+  const {url} = await startStandaloneServer(server, {
+    context: async () => ({}),
+    listen: {port: 4000}
+  });
+  console.log(`🚀  Server ready at: ${url}`);
+})();
