@@ -1,3 +1,4 @@
 .idx
 node_modules
 .env
+.idea
